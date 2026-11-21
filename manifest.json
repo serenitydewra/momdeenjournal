@@ -1,0 +1,26 @@
+{
+  "id": "/",
+  "name": "Mom Deen Journal",
+  "short_name": "Mom Deen",
+  "description": "A gentle Islamic journal and planner for everyday ibadah, reflection and growth.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FFFDF8",
+  "theme_color": "#DDEBD8",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
