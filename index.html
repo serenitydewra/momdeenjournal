@@ -2,6 +2,13 @@
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mom Deen Journal</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#DDEBD8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Mom Deen">
+<link rel="apple-touch-icon" sizes="192x192" href="/icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#FFFDF8;--card:#FFFFFF;--ink:#4a4458;--mut:#857f94;--sd:#6a9a65;--sage:#DDEBD8;--rose:#F3C9D5;--gold:#F9E6A8;--line:#ece4f3;--pink:#b9a3dc;--pink2:#8a6fb8;--pl:#F3E9F8;--sl:#E7F1E5;--ac:#DDEBD8;--ac2:#FFF0C9;--ad:#5f8f5b;--sh:0 8px 24px rgba(106,90,140,.1);box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -431,4 +438,10 @@ const _r=render;render=function(){_r();fit()};window.addEventListener('resize',f
 theme();render();updateAccountUI();
 sbClient.auth.onAuthStateChange((event,session)=>{if(session?.user){void loadCloudForUser(session.user)}else if(event==='SIGNED_OUT'){currentUser=null;cloudReady=false;updateAccountUI();render()}});
 sbClient.auth.getSession().then(({data,error})=>{if(error){console.error('Auth session error:',error);return}if(data.session?.user)void loadCloudForUser(data.session.user)});
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/service-worker.js').catch(err => console.warn('Service worker registration failed:', err));
+  });
+}
 </script></body></html>
