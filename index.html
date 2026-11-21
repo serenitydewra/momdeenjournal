@@ -1,11 +1,6 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#DDEBD8">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="apple-touch-icon" href="/icon-192.png">
-<link rel="manifest" href="/manifest.json">
 <title>Mom Deen Journal</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
@@ -166,12 +161,17 @@ input,select,textarea{font-size:16px;padding:12px 14px;border-radius:14px}
 </div>
 <div class="mlp-login" id="mlpLogin"><div class="mlp-login-card">
  <h2>Your journal, everywhere</h2><p class="mut">Sign in to sync your Mom Deen Journal across devices.</p>
- <label>Email</label><input type="email" placeholder="mama@example.com"><label>Password</label><input type="password" placeholder="At least 6 characters">
- <button class="btn" data-a="lmsg">Log in</button><button class="btn secondary" data-a="lmsg">Create account</button><button class="btn secondary" data-a="lmsg">Continue with Google</button>
+ <label>Email</label><input id="authEmail" type="email" autocomplete="email" placeholder="mama@example.com"><label>Password</label><input id="authPassword" type="password" autocomplete="current-password" placeholder="At least 6 characters">
+ <button class="btn" data-a="login">Log in</button><button class="btn secondary" data-a="signup">Create account</button><button class="btn secondary" data-a="google">Continue with Google</button>
  <button class="x" data-a="lclose" style="float:right;margin-top:12px;background:none;border:0;color:var(--mut);font:inherit">Close ×</button>
- <div class="mlp-login-status" id="mlpAuthStatus">Login is a visual placeholder for now — accounts will be connected later.</div>
+ <div class="mlp-login-status" id="mlpAuthStatus">Sign in or create an account to sync your journal across devices.</div>
 </div></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+const SUPABASE_URL="https://uvocjhluwkoexihbabux.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY="sb_publishable_k8bcUh_UrbRUmcMZZ24wEQ_0FnNEdEl";
+const sbClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+let currentUser=null,cloudReady=false,cloudTimer=null,cloudBusy=false;
 const LIB=(()=>{
 const g='#DDEBD8',m='#E7F1E5',y='#FFF0C9',b='#F9E6A8',p='#F7DDE5',k='#F3C9D5',u='#E8DDF5',l='#DCD0EE',c='#FFFDF8',w='#fff',o='stroke="#9c8bb8" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"',f=q=>`fill="${q}" ${o}`;
 const R=(x,y0,W,H,r,q)=>`<rect x="${x}" y="${y0}" width="${W}" height="${H}" rx="${r}" ${f(q)}/>`,Pa=(d,q)=>`<path d="${d}" ${f(q)}/>`,Ci=(x,y0,r,q)=>`<circle cx="${x}" cy="${y0}" r="${r}" ${f(q)}/>`,
@@ -288,7 +288,12 @@ quran:[{id:1,d:td(),s:'Example surah',a:'1–5',p:2,n:'Sample entry — replace 
 zs:0,zk:[['Subhanallah',33],['Alhamdulillah',33],['Allahu Akbar',34],['Astaghfirullah',100],['Selawat',100]].map(a=>({n:a[0],t:a[1],c:0})),zh:[{d:td(),n:'Subhanallah',c:33,x:1}],
 duas:[{id:1,t:'Sample: for my family',c:'Family',d:td(),n:'Sample du’a — write your own words here.',fav:1,ans:0,x:1}],refl:[],fast:[{id:1,d:td(),ty:'Monday',st:'planned',x:1}],qi:10,qd:[{id:1,d:'2026-10-01',n:'Sample'},{id:2,d:'2026-10-08',n:'Sample'},{id:3,d:'2026-10-15',n:'Sample'}],pages:[]});
 let S;try{S=JSON.parse(localStorage.getItem('mdj3'))}catch(x){}S=S||seed();
-const save=()=>{try{localStorage.setItem('mdj3',JSON.stringify(S))}catch(x){}};
+function setAuthMessage(message){const el=document.querySelector('#mlpAuthStatus');if(el)el.textContent=message}
+function updateAccountUI(){const label=currentUser?`♡ Account · ${currentUser.email||'Signed in'}`:'♡ Account · Local mode';document.querySelectorAll('.mlp-account[data-a="acct"]').forEach(el=>el.textContent=label);const email=document.querySelector('#profileEmail');if(email)email.value=currentUser?.email||'Not signed in';}
+async function writeCloud(){if(!currentUser||!cloudReady)return;if(cloudBusy){clearTimeout(cloudTimer);cloudTimer=setTimeout(writeCloud,500);return}cloudBusy=true;try{const {error}=await sbClient.from('planner_data').upsert({user_id:currentUser.id,data:S,updated_at:new Date().toISOString()},{onConflict:'user_id'});if(error)throw error;setAuthMessage('Your journal is synced.');}catch(err){console.error('Cloud sync error:',err);setAuthMessage('Sync issue: '+(err.message||'Please try again.'));}finally{cloudBusy=false;}}
+function queueCloudSave(){if(!currentUser||!cloudReady)return;clearTimeout(cloudTimer);cloudTimer=setTimeout(writeCloud,700)}
+async function loadCloudForUser(user){if(!user)return;if(currentUser?.id===user.id&&cloudReady)return;currentUser=user;cloudReady=false;updateAccountUI();setAuthMessage('Loading your journal…');try{const {data,error}=await sbClient.from('planner_data').select('data').eq('user_id',user.id).maybeSingle();if(error)throw error;if(data&&data.data&&typeof data.data==='object'){S=data.data;try{localStorage.setItem('mdj3',JSON.stringify(S))}catch(x){}}else{const {error:upErr}=await sbClient.from('planner_data').upsert({user_id:user.id,data:S,updated_at:new Date().toISOString()},{onConflict:'user_id'});if(upErr)throw upErr;}cloudReady=true;updateAccountUI();setAuthMessage('Signed in. Your journal is synced across devices.');render();}catch(err){console.error('Cloud load error:',err);setAuthMessage('Could not load cloud data: '+(err.message||'Please try again.'));}}
+const save=()=>{try{localStorage.setItem('mdj3',JSON.stringify(S))}catch(x){}queueCloudSave()};
 const V={np:0,stab:'pr',p:'home',date:td(),cf:'',dq:'',df:'',rq:'',mood:0,ed:null,sel:-1,img:''};
 const NAV=[['home','','Home'],['mut','','Mutabaah Amal'],['qur','','My Quran Journey'],['zik','','Zikir & Tasbih'],['dua','','My Du’a Journal'],['muh','','Muhasabah Harian'],['scr','','Islamic Scrapbook'],['fas','','Fasting Tracker']];
 const bar=p=>`<div class="bar"><b style="width:${Math.round(p*100)}%"></b></div>`,pc=p=>Math.round(p*100)+'%';
@@ -358,13 +363,17 @@ ${S.fast.slice().sort((a,b)=>a.d<b.d?1:-1).map(f=>`<div class="card"><b>${e(f.ty
 <h3 style="margin-top:24px">B. Puasa Ganti (Qada’)</h3><div class="card" style="text-align:center">Remaining qada’<div class="big" style="font-size:72px">${rem}</div>days${bar(S.qi?S.qd.length/S.qi:0)}<div class="mut">Initial ${S.qi} · Completed ${S.qd.length} · ${S.qi?pc(Math.min(1,S.qd.length/S.qi)):'0%'} done</div><div class="mut">Only qada’ records reduce this balance; sunat fasts never do.</div></div>
 <div class="card"><div class="row"><label>Initial outstanding days</label><input type="number" id="qi" min="0" value="${S.qi}" style="max-width:90px"></div><div class="row"><input type="date" id="qdd" value="${d}"><input id="qdn" placeholder="Note"><button class="btn" data-a="addqd">Add completed</button></div></div>
 ${S.qd.slice().sort((a,b)=>a.d<b.d?1:-1).map(r=>`<div class="card row"><div><b>${r.d}</b> <span class="mut">${e(r.n||'')}</span></div>${cf('qd:'+r.id,'Delete','delqd')}</div>`).join('')}`};
-P.set=()=>`${H("set","Settings")}<div class="card"><div class="ib" style="--p:#F7DDE5;width:64px;height:64px;color:#c0708a">${ic("dua",34)}</div><span class="mut">Profile photo placeholder</span><input id="sn" value="${e(S.name)}" placeholder="Display name"><input value="you@example.com" disabled><p class="mut">Email shown as a placeholder only.</p></div>
+P.set=()=>`${H("set","Settings")}<div class="card"><div class="ib" style="--p:#F7DDE5;width:64px;height:64px;color:#c0708a">${ic("dua",34)}</div><span class="mut">Your profile</span><input id="sn" value="${e(S.name)}" placeholder="Display name"><input id="profileEmail" value="${e(currentUser?.email||'Not signed in')}" disabled><p class="mut">${currentUser?'Your account is connected. Journal changes sync automatically.':'Sign in to keep your journal backed up and use it on other devices.'}</p><button class="btn o" data-a="acct">${currentUser?'Account details':'Sign in / Create account'}</button>${currentUser?'<button class="btn secondary" data-a="logout">Log out</button>':''}</div>
 <div class="card"><h3>Theme</h3><select id="th"><option value="">Match device</option><option value="light" ${S.th=='light'?'selected':''}>Light</option><option value="dark" ${S.th=='dark'?'selected':''}>Dark</option></select></div>
-<div class="card"><h3>About</h3><p>Mom Deen Journal — frontend prototype. Data lives only in this browser; no accounts or cloud.</p><button class="btn o" disabled>Log out (placeholder)</button> ${cf('rs:x','Clear prototype data','rs')}</div>`;
+<div class="card"><h3>About</h3><p>Mom Deen Journal · Your personal ibadah and reflection space. Your journal is stored on this device and, when signed in, synced securely to your account.</p>${cf('rs:x','Clear journal data','rs')}</div>`;
 function theme(){S.th?document.documentElement.dataset.theme=S.th:delete document.documentElement.dataset.theme}
 function render(){$('#mlpSetBody').innerHTML=P.set();$('#app').innerHTML=`<nav><div class="brand">${ic("fas",18)} Mom Deen Journal</div>${NAV.map(n=>`<button class="${V.p==n[0]?'on':''}" data-a="go" data-v="${n[0]}"><span class="ib" style="--p:${SC[n[0]][0]};color:${SC[n[0]][2]}">${ic(n[0],22)}</span>${n[2]}</button>`).join('')}</nav><main data-p="${V.p}" style="--ac:${SC[V.p][0]};--ac2:${SC[V.p][1]};--ad:${SC[V.p][2]}"><div class="tb"><button class="btn" data-a="theme" aria-label="Light or dark mode">◐</button><button class="btn" data-a="print">Print</button></div>${P[V.p]()}</main>${V.img?`<div class="ov"><img src="${V.img}"><div style="color:#fff">Press and hold (or right-click) the image to save it.</div><button class="btn" data-a="cimg">Close</button></div>`:''}`}
 const v=id=>($('#'+id)||{}).value||'',id=()=>Date.now()+Math.random();
-const A={stab(k){V.stab=k},print(){try{window.print()}catch(x){}},sopen(){$('#mlpSet').classList.add('open')},sclose(){$('#mlpSet').classList.remove('open')},mopen(){$('#mlpMusic').classList.toggle('open')},mtog(){M.on?mstop():mplay();$('#mbtn').textContent=M.on?'Pause':'Play'},copen(){$('#mlpCover').classList.add('gone');document.body.classList.remove('cover-on');scrollTo(0,0)},ccover(){$('#mlpCover').classList.remove('gone');document.body.classList.add('cover-on')},acct(){$('#mlpLogin').classList.add('open')},lclose(){$('#mlpLogin').classList.remove('open')},lmsg(){$('#mlpAuthStatus').textContent='This is a visual placeholder — real login will be connected later.'},
+const A={stab(k){V.stab=k},print(){try{window.print()}catch(x){}},sopen(){$('#mlpSet').classList.add('open')},sclose(){$('#mlpSet').classList.remove('open')},mopen(){$('#mlpMusic').classList.toggle('open')},mtog(){M.on?mstop():mplay();$('#mbtn').textContent=M.on?'Pause':'Play'},copen(){$('#mlpCover').classList.add('gone');document.body.classList.remove('cover-on');scrollTo(0,0)},ccover(){$('#mlpCover').classList.remove('gone');document.body.classList.add('cover-on')},acct(){$('#mlpLogin').classList.add('open');updateAccountUI()},lclose(){$('#mlpLogin').classList.remove('open')},
+async login(){const email=v('authEmail').trim(),password=v('authPassword');if(!email||!password)return setAuthMessage('Please enter your email and password.');setAuthMessage('Signing in…');const {error}=await sbClient.auth.signInWithPassword({email,password});if(error)setAuthMessage(error.message);else setAuthMessage('Signed in. Loading your journal…')},
+async signup(){const email=v('authEmail').trim(),password=v('authPassword');if(!email||!password)return setAuthMessage('Please enter your email and password.');if(password.length<6)return setAuthMessage('Password must be at least 6 characters.');setAuthMessage('Creating your account…');const {data,error}=await sbClient.auth.signUp({email,password,options:{emailRedirectTo:window.location.origin}});if(error)setAuthMessage(error.message);else if(data.session)setAuthMessage('Account created. Loading your journal…');else setAuthMessage('Account created! Please check your email to confirm, then log in.')},
+async google(){setAuthMessage('Opening Google sign-in…');const {error}=await sbClient.auth.signInWithOAuth({provider:'google',options:{redirectTo:window.location.origin}});if(error)setAuthMessage(error.message)},
+async logout(){clearTimeout(cloudTimer);while(cloudBusy)await new Promise(resolve=>setTimeout(resolve,100));await writeCloud();const {error}=await sbClient.auth.signOut();if(error){setAuthMessage(error.message);return}currentUser=null;cloudReady=false;updateAccountUI();setAuthMessage('You are signed out. Your journal remains saved on this device.');$('#mlpLogin').classList.remove('open');render()},
 theme(){const dk=document.documentElement.dataset.theme=='dark'||(!S.th&&matchMedia('(prefers-color-scheme:dark)').matches);S.th=dk?'light':'dark';theme()},go(p){V.p=p;V.cf='';V.ed=null;V.np=0;V.sel=-1;render();scrollTo(0,0)},tg(n){const k=V.date+'|'+n;S.checks[k]?delete S.checks[k]:S.checks[k]=1},ds(n){const x=new Date(V.date+'T00:00');x.setDate(x.getDate()+ +n);V.date=ymd(x)},
 addc(){const n=v('ca').trim();n&&!all().includes(n)&&S.custom.push(n)},
 addq(){S.quran.push({id:id(),d:v('qd')||td(),s:v('qs')||'—',a:v('qa'),p:+v('qp')||0,n:v('qn')})},addf(){v('fr')&&S.favs.push({id:id(),r:v('fr'),n:v('fn')})},
@@ -419,6 +428,7 @@ const gend=(ev,ok)=>{if(rz){rz=null;save();render();return}if(!tg0)return;clearT
 document.addEventListener('pointerup',ev=>gend(ev,1));document.addEventListener('pointercancel',ev=>gend(ev,0));
 function fit(){const w=$('#bdw'),b=$('#bd');if(!w||!b)return;const k=w.clientWidth/320;b.style.transform=`scale(${k})`;w.style.height=440*k+'px'}
 const _r=render;render=function(){_r();fit()};window.addEventListener('resize',fit);
-theme();render();
-</script><script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("/service-worker.js").catch(err=>console.log("Service worker registration failed:",err)));}</script>
-</body></html>
+theme();render();updateAccountUI();
+sbClient.auth.onAuthStateChange((event,session)=>{if(session?.user){void loadCloudForUser(session.user)}else if(event==='SIGNED_OUT'){currentUser=null;cloudReady=false;updateAccountUI();render()}});
+sbClient.auth.getSession().then(({data,error})=>{if(error){console.error('Auth session error:',error);return}if(data.session?.user)void loadCloudForUser(data.session.user)});
+</script></body></html>
