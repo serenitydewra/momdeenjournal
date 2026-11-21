@@ -308,7 +308,7 @@ const P={};
 P.home=()=>{const d=td(),pr=dp(d,F),qa=dp(d,QZ),dd=dp(d,[...DD,...S.custom]),zc=S.zk.reduce((a,z)=>a+z.c,0);
 const fm=S.fast.filter(f=>f.d.slice(0,7)==d.slice(0,7)&&f.st=='done').length,up=S.fast.filter(f=>f.st=='planned'&&f.d>=d).sort((a,b)=>a.d>b.d?1:-1)[0];
 return `<div class="hero"><div class="mut">${new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div><h1>Assalamualaikum, ${e(S.name)}</h1><div id="msg">${MSG[0]}</div></div>
-<p class="mut">All values below are prototype data stored only in this browser.</p>
+<p class="mut">${currentUser?'Your journal is saved to your account and synced across devices.':'Your journal is saved on this device. Sign in to sync it across devices.'}</p>
 <div class="card"><h3>Today’s Ibadah</h3>Prayers ${pc(pr)}${bar(pr)}Quran &amp; zikir ${pc(qa)}${bar(qa)}Good deeds ${pc(dd)}${bar(dd)}Tasbih count today: <b>${zc}</b></div>
 <div class="grid"><div class="card">Weekly progress<div class="big">${pc(avg(d,7,all()))}</div></div><div class="card">Monthly progress<div class="big">${pc(avg(d,30,all()))}</div></div><div class="card">Quran today<div class="big">${S.quran.filter(q=>q.d==d).reduce((a,q)=>a+ +q.p,0)}/${S.qg}</div><span class="mut">pages</span></div></div>
 <div class="card"><h3>Fasting overview</h3>Upcoming sunat: <b>${up?e(up.ty)+' · '+up.d:'none planned'}</b><br>Completed this month: <b>${fm}</b> · Qada’ remaining: <b>${Math.max(0,S.qi-S.qd.length)}</b> days</div>
